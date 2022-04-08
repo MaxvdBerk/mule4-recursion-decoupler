@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="f2324587-e0ac-4f59-9f87-6cfb4caabe84" basePath="api" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="2e4cd5fd-89db-4e96-9099-1842998a1ad7" basePath="/someresource" >
+		<http:request-connection host="localhost" port="8082" />
+	</http:request-config>
+	<os:object-store name="Object_store" doc:name="Object store" doc:id="8f7b0573-b48b-4fb2-afd8-2bc7986ac913" />
+	<file:config name="File_Config" doc:name="File Config" doc:id="dd287128-161e-4210-84f5-07930f5d1dc1" />
+	<vm:config name="VM_Config" doc:name="VM Config" doc:id="37cf686d-267a-41f7-b043-71a0840783bf">
+		<vm:queues >
+			<vm:queue queueName="recursion" />
+		</vm:queues>
+	</vm:config>
+	<configuration-properties doc:name="Configuration properties" doc:id="1deeeded-030f-4d31-b360-ae7931869556" file="properties.yaml" />
+	<flow name="recursiondecouplerFlow" doc:id="f2ad9bd4-6069-4a5c-816a-7c5a4be80cf1" >
+		<http:listener doc:name="Listener" doc:id="c2a78b8c-0bd1-4868-a5ee-ca3088563012" config-ref="HTTP_Listener_config" path="get-all"/>
+		<flow-ref doc:name="get-all" doc:id="07c2de8b-efe6-4157-a352-64d82876d866" name="get-all"/>
+	</flow>
+	<flow name="get-all" doc:id="a86038a5-73d0-43d9-9842-39afa14bb1e4" >
+		<vm:listener doc:name="Listener" doc:id="0ddfb0e2-a8f8-479e-b5c2-b2462e1ead10" queueName="recursion" config-ref="VM_Config" />
+		<flow-ref doc:name="dataBase-mock" doc:id="0462bad7-ac5f-44a6-b18f-80a76442ca17" name="dataBase-mock"/>
+		<logger level="INFO" doc:name="use-data" doc:id="5aa741df-d441-4d71-ad66-4702cc0f71ce" message="#[{offset: payload.offset} ++ {result: vars.result}]"/>
+		<choice doc:name="Choice" doc:id="867e0f29-9fac-4328-8bfa-a92e85e1cf5b">
+			<when expression="#[sizeOf(vars.result) == payload.batchSize]">
+				<logger level="INFO" doc:name="Logger" doc:id="e943e613-87a6-4df6-b939-9acc2d421daa" message="The amount of elements in the list is as big as the batch size. Therefore we can try for more. " />
+				<ee:transform doc:name="increment-batch" doc:id="843056a3-8120-41e6-9719-4f6dacd247ac">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+import * from dw::util::Values
+output application/java
+---
+payload update field('offset') with $ + payload.batchSize]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<vm:publish doc:name="Publish" doc:id="ea70b44b-49c3-45ab-875b-255075881953" queueName="recursion" transactionalAction="NOT_SUPPORTED" config-ref="VM_Config"/>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Finish" doc:id="44964940-942a-4706-9f71-a0dddcc82597" message="Remaining elements are smaller than batch size, therefore we can assume we got all messages"/>
+			</otherwise>
+		</choice>
+	</flow>
+	<flow name="dataBase-mock" doc:id="cab68641-3f3a-43ef-ac6c-af8ed963c742" >
+		<file:read doc:name="Read" doc:id="cc38116a-69f8-42b6-a316-406ffd3b5c39" config-ref="File_Config" path="C:\Users\max\AnypointStudio\try\recursiondecoupler\src\main\resources\mock-database.json" target="result" outputMimeType="application/json" outputEncoding="UTF-8"/>
+		<ee:transform doc:name="retun-batch" doc:id="f51bdf08-5cbc-4f38-9cb0-a47721fe9801">
+			<ee:message>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="result" ><![CDATA[%dw 2.0
+import * from dw::core::Arrays
+output application/java
+---
+slice(vars.result, payload.offset as Number, (payload.offset as Number + payload.batchSize as Number ))]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+	</flow>
+	<flow name="max-child-limit" doc:id="6dc1a7a9-b87b-4775-96ee-f582d25875e7" >
+		<http:listener doc:name="Listener" doc:id="88c82f09-5093-43ff-8772-ddb63970fd0c" config-ref="HTTP_Listener_config" path="get-limited" />
+		<flow-ref doc:name="dataBase-mock" doc:id="1230dcd6-6ca4-42e1-ad11-622008844c92" name="dataBase-mock" />
+		<logger level="INFO" doc:name="use-data" doc:id="e2b85fc3-ab69-4f07-853e-b18b53c41071" message="#[{offset: payload.offset} ++ {result: vars.result}]" />
+		<choice doc:name="Choice" doc:id="bd415ab1-603f-49f3-adf4-d91ea1b3404c" >
+			<when expression="#[sizeOf(vars.result) == payload.batchSize]" >
+				<logger level="INFO" doc:name="Logger" doc:id="9996539a-856c-4466-b0f1-8bc66f8d72d1" message="The amount of elements in the list is as big as the batch size. Therefore we can try for more. " />
+				<ee:transform doc:name="increment-batch" doc:id="c8b13d0c-aaa1-4af8-81b0-86a34672bc55" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+import * from dw::util::Values
+output application/java
+---
+payload update field('offset') with $ + payload.batchSize]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<flow-ref doc:name="max-child-limit" doc:id="f335b7e6-5746-4432-9d36-934a3d7de30a" name="max-child-limit"/>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Finish" doc:id="cc8bd204-3a15-4054-9409-a553619b5cb1" message="Remaining elements are smaller than batch size, therefore we can assume we got all messages" />
+			</otherwise>
+		</choice>
+	</flow>
+</mule>

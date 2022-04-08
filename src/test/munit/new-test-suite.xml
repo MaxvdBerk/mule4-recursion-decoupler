@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
+	xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<munit:config name="new-test-suite.xml" />
+	<munit:test name="unlimitedChildFlows-test" doc:id="9d6cfbe4-9b9e-4a52-abe5-5808d48bee48" description="Test" timeOut="5000">
+		<munit:execution >
+			<ee:transform doc:name="set offset and batchSize" doc:id="8df2a05f-ccfa-4ead-8c6e-6f7e542f84df" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+    offset: 0 as Number,
+    batchSize: p('recursion.batchSize') as Number
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<flow-ref doc:name="Flow-ref to get-all" doc:id="5a386088-13a0-415a-884c-564c1dafe0cf" name="get-all"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:verify-call doc:name="Verify call" doc:id="0a0960d2-cc8e-4f87-aa3b-5a845eb21010" processor="flow-ref" atLeast="1">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="dataBase-mock" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="dataBase-mock" attributeName="name" />
+				</munit-tools:with-attributes>
+			</munit-tools:verify-call>
+			<logger level="INFO" doc:name="Logger" doc:id="26151c93-7de6-44db-a99b-0a4c59e685b4" message="Child Limit bypassed"/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="limitedChildFlows-test" doc:id="22ac9780-b3ea-4e19-9958-39e38b492c42" description="Test" expectedErrorType="ANY" timeOut="5000">
+		<munit:execution >
+						<ee:transform doc:name="set offset and batchSize" doc:id="8df2a05f-ccfa-4ead-8c6e-6f7e542f84df" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+    offset: 0 as Number,
+    batchSize: p('recursion.batchSize') as Number
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<flow-ref doc:name="Flow-ref to max-child-limit" doc:id="db648fcb-b284-47ac-8d05-a7ed46595cef" name="max-child-limit"/>
+		</munit:execution>
+	</munit:test>
+
+
+</mule>
