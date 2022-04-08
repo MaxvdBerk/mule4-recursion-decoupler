@@ -37,7 +37,7 @@ http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/fil
 					<ee:message>
 						<ee:set-payload><![CDATA[%dw 2.0
 import * from dw::util::Values
-output application/java
+output application/json
 ---
 payload update field('offset') with $ + payload.batchSize]]></ee:set-payload>
 					</ee:message>
@@ -57,7 +57,7 @@ payload update field('offset') with $ + payload.batchSize]]></ee:set-payload>
 			<ee:variables >
 				<ee:set-variable variableName="result" ><![CDATA[%dw 2.0
 import * from dw::core::Arrays
-output application/java
+output application/json
 ---
 slice(vars.result, payload.offset as Number, (payload.offset as Number + payload.batchSize as Number ))]]></ee:set-variable>
 			</ee:variables>
@@ -74,7 +74,7 @@ slice(vars.result, payload.offset as Number, (payload.offset as Number + payload
 					<ee:message >
 						<ee:set-payload ><![CDATA[%dw 2.0
 import * from dw::util::Values
-output application/java
+output application/json
 ---
 payload update field('offset') with $ + payload.batchSize]]></ee:set-payload>
 					</ee:message>

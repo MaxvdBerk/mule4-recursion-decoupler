@@ -1,0 +1,65 @@
+{
+	"info": {
+		"_postman_id": "07e0fd81-8563-48a6-b42b-86f8d0846a99",
+		"name": "event-decoupler",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "localhost:8081/api/get-all",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"offset\": 0,\r\n    \"batchSize\": 1\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:8081/api/get-all",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"get-all"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "localhost:8081/api/get-limited",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"offset\": 0,\r\n    \"batchSize\": 1\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:8081/api/get-limited",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"get-limited"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
